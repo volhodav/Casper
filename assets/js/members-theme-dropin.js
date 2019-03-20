@@ -1,100 +1,64 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 
-/* global document window */
-var layer1 = require('@tryghost/members-layer1');
+/* globals window */
+module.exports = function layer0(frame) {
+  var getuid = function (i) {
+    return function () {
+      return i += 1;
+    };
+  }(1);
 
-module.exports = function layer2(options) {
-  var authUrl = "".concat(options.membersUrl, "/auth");
-  var gatewayUrl = "".concat(options.membersUrl, "/gateway");
-  var container = options.container;
-  var members = layer1({
-    gatewayUrl: gatewayUrl,
-    container: container
+  var origin = new URL(frame.getAttribute('src')).origin;
+  var handlers = {};
+
+  var listener = function listener() {};
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== origin) {
+      return;
+    }
+
+    if (!event.data || !event.data.uid) {
+      if (event.data.event) {
+        return listener(event.data);
+      }
+
+      return;
+    }
+
+    var handler = handlers[event.data.uid];
+
+    if (!handler) {
+      return;
+    }
+
+    delete handlers[event.data.uid];
+    handler(event.data.error, event.data.data);
   });
-  var loadAuth = loadFrame(authUrl, container).then(function (frame) {
-    frame.style.position = 'fixed';
-    frame.style.width = '100%';
-    frame.style.height = '100%';
-    frame.style.background = 'transparent';
-    frame.style.top = '0';
-    frame.style['z-index'] = '9999';
-    return frame;
-  });
 
-  function openAuth(hash) {
-    var query = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-    return loadAuth.then(function (frame) {
-      return new Promise(function (resolve) {
-        frame.src = "".concat(authUrl, "#").concat(hash, "?").concat(query);
-        frame.style.display = 'block';
-        window.addEventListener('message', function messageListener(event) {
-          if (event.source !== frame.contentWindow) {
-            return;
-          }
-
-          if (!event.data || event.data.msg !== 'pls-close-auth-popup') {
-            return;
-          }
-
-          window.removeEventListener('message', messageListener);
-          frame.style.display = 'none';
-          resolve(!!event.data.success);
-        });
-      });
-    });
+  function call(method, options, cb) {
+    var uid = getuid();
+    var data = {
+      uid: uid,
+      method: method,
+      options: options
+    };
+    handlers[uid] = cb;
+    frame.contentWindow.postMessage(data, origin);
   }
 
-  function resetPassword(_ref) {
-    var token = _ref.token;
-    var query = "token=".concat(token);
-    return openAuth('reset-password', query);
+  function listen(fn) {
+    listener = fn;
   }
 
-  function signin() {
-    return openAuth('signin');
-  }
-
-  function upgrade() {
-    return openAuth('upgrade');
-  }
-
-  function getToken(_ref2) {
-    var audience = _ref2.audience;
-    return members.getToken({
-      audience: audience
-    });
-  }
-
-  function signout() {
-    return members.signout();
-  }
-
-  return Object.assign(members.bus, {
-    getToken: getToken,
-    signout: signout,
-    signin: signin,
-    upgrade: upgrade,
-    resetPassword: resetPassword
-  });
+  return {
+    call: call,
+    listen: listen
+  };
 };
 
-function loadFrame(src) {
-  var container = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : document.body;
-  return new Promise(function (resolve) {
-    var frame = document.createElement('iframe');
-    frame.style.display = 'none';
-    frame.src = src;
-
-    frame.onload = function () {
-      resolve(frame);
-    };
-
-    container.appendChild(frame);
-  });
-}
-
-},{"@tryghost/members-layer1":2}],2:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 "use strict";
 
 /* global document */
@@ -125,9 +89,11 @@ module.exports = function layer1(options) {
   });
 
   function getToken(_ref) {
-    var audience = _ref.audience;
+    var audience = _ref.audience,
+        fresh = _ref.fresh;
     return loadGateway.then(gatewayFn('getToken', {
-      audience: audience
+      audience: audience,
+      fresh: fresh
     }));
   }
 
@@ -211,92 +177,105 @@ function loadFrame(src) {
   });
 }
 
-},{"@tryghost/members-layer0":3,"minivents":4}],3:[function(require,module,exports){
+},{"@tryghost/members-layer0":1,"minivents":5}],3:[function(require,module,exports){
 "use strict";
 
-/* globals window */
-module.exports = function layer0(frame) {
-  var getuid = function (i) {
-    return function () {
-      return i += 1;
-    };
-  }(1);
+/* global document window */
+var layer1 = require('@tryghost/members-layer1');
 
-  var origin = new URL(frame.getAttribute('src')).origin;
-  var handlers = {};
-
-  var listener = function listener() {};
-
-  window.addEventListener('message', function (event) {
-    if (event.origin !== origin) {
-      return;
-    }
-
-    if (!event.data || !event.data.uid) {
-      if (event.data.event) {
-        return listener(event.data);
-      }
-
-      return;
-    }
-
-    var handler = handlers[event.data.uid];
-
-    if (!handler) {
-      return;
-    }
-
-    delete handlers[event.data.uid];
-    handler(event.data.error, event.data.data);
+module.exports = function layer2(options) {
+  var authUrl = "".concat(options.membersUrl, "/auth");
+  var gatewayUrl = "".concat(options.membersUrl, "/gateway");
+  var container = options.container;
+  var members = layer1({
+    gatewayUrl: gatewayUrl,
+    container: container
+  });
+  var loadAuth = loadFrame(authUrl, container).then(function (frame) {
+    frame.style.position = 'fixed';
+    frame.style.width = '100%';
+    frame.style.height = '100%';
+    frame.style.background = 'transparent';
+    frame.style.top = '0';
+    frame.style['z-index'] = '9999';
+    return frame;
   });
 
-  function call(method, options, cb) {
-    var uid = getuid();
-    var data = {
-      uid: uid,
-      method: method,
-      options: options
+  function openAuth(hash) {
+    var query = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+    return loadAuth.then(function (frame) {
+      return new Promise(function (resolve) {
+        frame.src = "".concat(authUrl, "#").concat(hash, "?").concat(query);
+        frame.style.display = 'block';
+        window.addEventListener('message', function messageListener(event) {
+          if (event.source !== frame.contentWindow) {
+            return;
+          }
+
+          if (!event.data || event.data.msg !== 'pls-close-auth-popup') {
+            return;
+          }
+
+          window.removeEventListener('message', messageListener);
+          frame.style.display = 'none';
+          resolve(!!event.data.success);
+        });
+      });
+    });
+  }
+
+  function resetPassword(_ref) {
+    var token = _ref.token;
+    var query = "token=".concat(token);
+    return openAuth('reset-password', query);
+  }
+
+  function signin() {
+    return openAuth('signin');
+  }
+
+  function upgrade() {
+    return openAuth('upgrade');
+  }
+
+  function getToken(_ref2) {
+    var audience = _ref2.audience,
+        fresh = _ref2.fresh;
+    return members.getToken({
+      audience: audience,
+      fresh: fresh
+    });
+  }
+
+  function signout() {
+    return members.signout();
+  }
+
+  return Object.assign(members.bus, {
+    getToken: getToken,
+    signout: signout,
+    signin: signin,
+    upgrade: upgrade,
+    resetPassword: resetPassword
+  });
+};
+
+function loadFrame(src) {
+  var container = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : document.body;
+  return new Promise(function (resolve) {
+    var frame = document.createElement('iframe');
+    frame.style.display = 'none';
+    frame.src = src;
+
+    frame.onload = function () {
+      resolve(frame);
     };
-    handlers[uid] = cb;
-    frame.contentWindow.postMessage(data, origin);
-  }
 
-  function listen(fn) {
-    listener = fn;
-  }
+    container.appendChild(frame);
+  });
+}
 
-  return {
-    call: call,
-    listen: listen
-  };
-};
-
-},{}],4:[function(require,module,exports){
-"use strict";
-
-module.exports = function (n) {
-  var t = {},
-      e = [];
-  n = n || this, n.on = function (e, r, l) {
-    return (t[e] = t[e] || []).push([r, l]), n;
-  }, n.off = function (r, l) {
-    r || (t = {});
-
-    for (var o = t[r] || e, u = o.length = l ? o.length : 0; u--;) {
-      l == o[u][0] && o.splice(u, 1);
-    }
-
-    return n;
-  }, n.emit = function (r) {
-    for (var l, o = t[r] || e, u = o.length > 0 ? o.slice(0, o.length) : o, i = 0; l = u[i++];) {
-      l[0].apply(l[1], e.slice.call(arguments, 1));
-    }
-
-    return n;
-  };
-};
-
-},{}],5:[function(require,module,exports){
+},{"@tryghost/members-layer1":2}],4:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -326,6 +305,31 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
     loaded ? setTimeout(fn, 0) : fns.push(fn);
   };
 });
+
+},{}],5:[function(require,module,exports){
+"use strict";
+
+module.exports = function (n) {
+  var t = {},
+      e = [];
+  n = n || this, n.on = function (e, r, l) {
+    return (t[e] = t[e] || []).push([r, l]), n;
+  }, n.off = function (r, l) {
+    r || (t = {});
+
+    for (var o = t[r] || e, u = o.length = l ? o.length : 0; u--;) {
+      l == o[u][0] && o.splice(u, 1);
+    }
+
+    return n;
+  }, n.emit = function (r) {
+    for (var l, o = t[r] || e, u = o.length > 0 ? o.slice(0, o.length) : o, i = 0; l = u[i++];) {
+      l[0].apply(l[1], e.slice.call(arguments, 1));
+    }
+
+    return n;
+  };
+};
 
 },{}],6:[function(require,module,exports){
 "use strict";
@@ -428,7 +432,8 @@ function setupMembersListeners() {
     event.preventDefault();
     members.signin().then(function () {
       return members.getToken({
-        audience: tokenAudience
+        audience: tokenAudience,
+        fresh: true
       }).then(function (token) {
         setCookie(token);
         return true;
@@ -438,7 +443,15 @@ function setupMembersListeners() {
 
   function upgrade(event) {
     event.preventDefault();
-    members.upgrade().then(reload);
+    members.upgrade().then(function () {
+      return members.getToken({
+        audience: tokenAudience,
+        fresh: true
+      }).then(function (token) {
+        setCookie(token);
+        return true;
+      });
+    }).then(reload);
   }
 
   var _iteratorNormalCompletion = true;
@@ -549,4 +562,4 @@ function getClaims(token) {
   }
 }
 
-},{"@tryghost/members-layer2":1,"domready":5}]},{},[6]);
+},{"@tryghost/members-layer2":3,"domready":4}]},{},[6]);
