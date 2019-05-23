@@ -69,6 +69,7 @@ body {
 .outer {
     position: relative;
     padding: 0 4vw;
+    background-color: #050d10;
 }
 
 /* Centered content container blocks */
@@ -167,7 +168,7 @@ body {
 }
 
 .site-logo {
-    max-height: 45px;
+    width: 5em;
 }
 
 .site-description {
@@ -2036,6 +2037,7 @@ Usage (In Ghost editor):
     line-height: 1em;
     letter-spacing: -5px;
     opacity: 0.3;
+    color: #fff;
 }
 
 .error-description {
