@@ -69,7 +69,7 @@ body {
 .outer {
     position: relative;
     padding: 0 4vw;
-    background-color: #050d10;
+    background: radial-gradient(circle farthest-corner at right bottom,#91c6ff,#648ecc 10%,#4667ae 20%,#3242a0 27%,#38228f 35%,#2d1470 50%,#310c4f 63%,#220326 93%,#000);
 }
 
 /* Centered content container blocks */
