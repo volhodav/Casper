@@ -2034,18 +2034,24 @@ Usage (In Ghost editor):
 .error-code {
     margin: 0;
     font-size: 12vw;
-    line-height: 1em;
+    /* line-height: 1em; */
     letter-spacing: -5px;
-    opacity: 0.3;
+    /* opacity: 0.3; */
     color: #fff;
 }
 
 .error-description {
     margin: 0;
-    color: var(--midgrey);
+    /* color: var(--midgrey); */
+    color: #fff;
     font-size: 3rem;
     line-height: 1.3em;
     font-weight: 400;
+}
+
+.errftr {
+    background: none;
+    padding-top: 20px; 
 }
 
 @media (max-width: 800px) {
